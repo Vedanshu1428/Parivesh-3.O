@@ -20,7 +20,8 @@ if (process.env.NODE_ENV !== 'production') {
   global.__prisma = prisma;
 }
 
-prisma.$on('query', (e) => {
+// @ts-ignore - Prisma types for $on require precise PrismaClient generic instantiation
+prisma.$on('query', (e: any) => {
   if (process.env.NODE_ENV === 'development') {
     logger.debug(`Query: ${e.query} | Params: ${e.params} | Duration: ${e.duration}ms`);
   }

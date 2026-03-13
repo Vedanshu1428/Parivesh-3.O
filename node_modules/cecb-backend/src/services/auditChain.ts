@@ -6,14 +6,23 @@ interface AuditLogInput {
   eventType: string;
   actorId: string;
   applicationId?: string;
-  payload?: Record<string, unknown>;
+  payload?: any;
 }
-
 class AuditChainService {
+  private stableStringify(obj: any): string {
+    if (obj === null || typeof obj !== 'object') {
+      return JSON.stringify(obj);
+    }
+    if (Array.isArray(obj)) {
+      return '[' + obj.map(item => this.stableStringify(item)).join(',') + ']';
+    }
+    const keys = Object.keys(obj).sort();
+    return '{' + keys.map(k => `"${k}":${this.stableStringify(obj[k])}`).join(',') + '}';
+  }
+
   async log(input: AuditLogInput): Promise<void> {
     try {
-      const payloadJson = JSON.stringify(input.payload || {});
-      const payloadHash = sha3_256(payloadJson);
+      const payloadHash = sha3_256(this.stableStringify(input.payload || {}));
 
       // Get the last entry's chain hash
       const lastEntry = await prisma.auditChain.findFirst({
@@ -54,7 +63,7 @@ class AuditChainService {
     let expectedPrevHash = sha3_256('GENESIS');
 
     for (const entry of entries) {
-      const recomputedPayloadHash = sha3_256(JSON.stringify(entry.payload || {}));
+      const recomputedPayloadHash = sha3_256(this.stableStringify(entry.payload || {}));
 
       if (recomputedPayloadHash !== entry.payloadHash) {
         return { valid: false, brokenAt: entry.id, totalEntries: entries.length };

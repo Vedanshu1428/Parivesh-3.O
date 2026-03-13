@@ -109,7 +109,7 @@ export default function AuditLog() {
                       <Hash className="w-3 h-3" />
                       <span className="font-mono truncate max-w-[120px]" title={event.chainHash}>{event.chainHash.slice(0, 16)}…</span>
                     </div>
-                    <Shield className="w-3 h-3 text-green-400" title="Chain integrity OK" />
+                    <Shield className="w-3 h-3 text-green-400" />
                   </div>
                 </div>
               </div>

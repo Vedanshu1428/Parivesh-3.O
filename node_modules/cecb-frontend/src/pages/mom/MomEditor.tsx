@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -7,14 +7,16 @@ import Heading from '@tiptap/extension-heading';
 import Placeholder from '@tiptap/extension-placeholder';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { Bold, Italic, List, Heading2, Save, Lock, Download, ArrowLeft, Sparkles } from 'lucide-react';
+import { Bold, Italic, List, Heading2, Lock, Download, ArrowLeft, Sparkles, FileText } from 'lucide-react';
 import api from '../../lib/api';
+import { useAuthStore } from '../../store/authStore';
 
 export default function MomEditor() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
+  const token = useAuthStore((s) => s.accessToken);
 
   const { data: app, isLoading } = useQuery({
     queryKey: ['application', id],
@@ -36,9 +38,14 @@ export default function MomEditor() {
   });
 
   // Update editor content when app data loads
-  if (editor && app && !editor.getText()) {
-    editor.commands.setContent(app.momText || app.gistText || '');
-  }
+  useEffect(() => {
+    if (editor && app && !editor.getText()) {
+      const initialContent = app.momText || app.gistText;
+      if (initialContent) {
+        editor.commands.setContent(initialContent);
+      }
+    }
+  }, [editor, app]);
 
   let saveTimeout: ReturnType<typeof setTimeout>;
   const autoSave = async (content: string) => {
@@ -97,19 +104,31 @@ export default function MomEditor() {
           {isSaving && <span className="text-xs text-gray-400">Saving...</span>}
           {app?.gistText && !app?.momText && (
             <button
-              onClick={() => editor?.commands.setContent(app.gistText || '')}
+              onClick={() => {
+                const html = app.gistText?.split('\n').map((p: string) => p.trim() ? `<p>${p}</p>` : '').join('') || '';
+                editor?.commands.setContent(html);
+                editor?.commands.focus();
+              }}
               className="flex items-center gap-1.5 text-sm text-purple-600 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-100"
             >
               <Sparkles className="w-3.5 h-3.5" /> Load AI Gist
             </button>
           )}
           <a
-            href={`/api/gist/${id}/export?format=pdf`}
+            href={`/api/gist/${id}/export?format=pdf&token=${token}`}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50"
           >
             <Download className="w-3.5 h-3.5" /> Export PDF
+          </a>
+          <a
+            href={`/api/gist/${id}/export?format=docx&token=${token}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 text-sm text-gray-600 border border-gray-300 px-3 py-1.5 rounded-lg hover:bg-gray-50 bg-white"
+          >
+            <FileText className="w-3.5 h-3.5" /> Export Word
           </a>
           {!app?.momLocked && (
             <motion.button
@@ -134,7 +153,7 @@ export default function MomEditor() {
         <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2 text-sm text-green-700">
           <Lock className="w-4 h-4" />
           This MoM is finalized and locked. No further edits are permitted.
-          <a href={`/api/gist/${id}/export?format=pdf`} target="_blank" rel="noreferrer" className="ml-auto font-medium underline underline-offset-2">
+          <a href={`/api/gist/${id}/export?format=pdf&token=${token}`} target="_blank" rel="noreferrer" className="ml-auto font-medium underline underline-offset-2">
             Download PDF
           </a>
         </div>

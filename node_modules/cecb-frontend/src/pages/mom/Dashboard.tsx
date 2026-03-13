@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { BookOpen, FileEdit, CheckCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { BookOpen, FileEdit, CheckCircle, ArrowRight, Sparkles, Download, FileText } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '../../lib/api';
 import StatusBadge from '../../components/StatusBadge';
+import { useAuthStore } from '../../store/authStore';
 
 interface Application {
   id: string;
@@ -20,6 +21,7 @@ interface Application {
 }
 
 export default function MomDashboard() {
+  const token = useAuthStore((s) => s.accessToken);
   const { data, isLoading } = useQuery({
     queryKey: ['applications', 'mom'],
     queryFn: () => api.get('/applications').then((r) => r.data),
@@ -127,14 +129,24 @@ export default function MomDashboard() {
                     </Link>
                   )}
                   {app.status === 'FINALIZED' && (
-                    <a
-                      href={`/api/gist/${app.id}/export?format=pdf`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs bg-green-500 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-colors"
-                    >
-                      Export PDF
-                    </a>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`/api/gist/${app.id}/export?format=pdf&token=${token}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs flex items-center gap-1 bg-green-500 text-white px-3 py-1.5 rounded-lg hover:bg-green-600 transition-colors"
+                      >
+                        <Download className="w-3 h-3" /> PDF
+                      </a>
+                      <a
+                        href={`/api/gist/${app.id}/export?format=docx&token=${token}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs flex items-center gap-1 bg-blue-500 text-white px-3 py-1.5 rounded-lg hover:bg-blue-600 transition-colors"
+                      >
+                        <FileText className="w-3 h-3" /> Word
+                      </a>
+                    </div>
                   )}
                   <Link
                     to={`/dashboard/mom/editor/${app.id}`}

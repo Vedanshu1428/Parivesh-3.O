@@ -49,7 +49,10 @@ export default function ProponentDashboard() {
       toast.success('Application submitted!');
       void queryClient.invalidateQueries({ queryKey: ['applications'] });
     },
-    onError: () => toast.error('Submission failed'),
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Submission failed';
+      toast.error(msg);
+    },
   });
 
   if (isLoading) {

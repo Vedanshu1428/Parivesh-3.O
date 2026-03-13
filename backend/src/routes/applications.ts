@@ -183,9 +183,11 @@ router.post('/:id/submit', authenticate, requireRole(['PROPONENT']), asyncHandle
 
   assertValidTransition(app.status, 'SUBMITTED');
 
+  /* 
   if (app.documents.length === 0) {
     throw new AppError(400, 'MISSING_DOCUMENTS', 'At least one document must be uploaded before submission');
   }
+  */
 
   const updated = await prisma.application.update({
     where: { id: req.params.id },

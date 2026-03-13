@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import PdfPrinter from 'pdfmake';
+const PdfPrinter = require('pdfmake');
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import fs from 'fs';
@@ -54,11 +54,14 @@ router.post('/:applicationId/lock', authenticate, requireRole(['MOM_TEAM', 'ADMI
     const app = await prisma.application.findUnique({ where: { id: req.params.applicationId } });
     if (!app) throw new AppError(404, 'NOT_FOUND', 'Application not found');
     if (app.momLocked) throw new AppError(400, 'ALREADY_LOCKED', 'MoM already locked');
-    if (!app.momText) throw new AppError(400, 'MISSING_MOM', 'MoM text required before locking');
+    if (!app.momText && !app.gistText) throw new AppError(400, 'MISSING_MOM', 'MoM text required before locking');
+
+    // Automatically copy the gist text into momText if locking an untouched gist
+    const finalMomText = app.momText || app.gistText;
 
     const updated = await prisma.application.update({
       where: { id: req.params.applicationId },
-      data: { momLocked: true, momLockedAt: new Date(), status: 'FINALIZED' },
+      data: { momLocked: true, momLockedAt: new Date(), status: 'FINALIZED', momText: finalMomText },
     });
 
     await auditChainService.log({
@@ -80,7 +83,7 @@ router.get('/:applicationId/export', authenticate, asyncHandler(async (req: Auth
     include: { proponent: { select: { name: true, organization: true, email: true } } },
   });
   if (!app) throw new AppError(404, 'NOT_FOUND', 'Application not found');
-  if (!app.momText) throw new AppError(400, 'NO_MOM', 'MoM has not been generated yet');
+  if (!app.momText && !app.gistText) throw new AppError(400, 'NO_MOM', 'MoM has not been generated yet');
 
   const momContent = app.momText || app.gistText || '';
   const projectName = app.projectName;
@@ -88,10 +91,12 @@ router.get('/:applicationId/export', authenticate, asyncHandler(async (req: Auth
 
   if (format === 'pdf') {
     const fonts = {
-      Roboto: {
-        normal: 'node_modules/pdfmake/build/vfs_fonts.js',
-        bold: 'node_modules/pdfmake/build/vfs_fonts.js',
-      },
+      Helvetica: {
+        normal: 'Helvetica',
+        bold: 'Helvetica-Bold',
+        italics: 'Helvetica-Oblique',
+        bolditalics: 'Helvetica-BoldOblique'
+      }
     };
 
     const printer = new PdfPrinter(fonts);
@@ -118,10 +123,10 @@ router.get('/:applicationId/export', authenticate, asyncHandler(async (req: Auth
         signature: { fontSize: 11, bold: true, margin: [0, 4, 0, 0] },
         signatureSub: { fontSize: 9, color: '#555' },
       },
-      defaultStyle: { font: 'Roboto' },
+      defaultStyle: { font: 'Helvetica' },
     };
 
-    const pdfDoc = printer.createPdfKitDocument(docDefinition as Parameters<InstanceType<typeof PdfPrinter>['createPdfKitDocument']>[0]);
+    const pdfDoc = printer.createPdfKitDocument(docDefinition as any);
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="MoM-${app.id.slice(0, 8)}.pdf"`);
     pdfDoc.pipe(res);
@@ -130,26 +135,52 @@ router.get('/:applicationId/export', authenticate, asyncHandler(async (req: Auth
   }
 
   if (format === 'docx') {
-    // Simple DOCX using docxtemplater with embedded template
-    const templatePath = path.join(__dirname, '../templates/mom_template.docx');
-    if (!fs.existsSync(templatePath)) {
-      // Fallback: send plain text as .txt
-      res.setHeader('Content-Type', 'text/plain');
-      res.setHeader('Content-Disposition', `attachment; filename="MoM-${app.id.slice(0, 8)}.txt"`);
-      return res.send(momContent);
-    }
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = require('docx');
+    
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children: [
+          new Paragraph({
+            text: "CHHATTISGARH ENVIRONMENT CONSERVATION BOARD",
+            heading: HeadingLevel.HEADING_1,
+            alignment: AlignmentType.CENTER,
+          }),
+          new Paragraph({
+            text: "MINUTES OF MEETING",
+            heading: HeadingLevel.HEADING_2,
+            alignment: AlignmentType.CENTER,
+          }),
+          new Paragraph({ text: "" }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Project: ", bold: true }),
+              new TextRun(projectName)
+            ]
+          }),
+          new Paragraph({
+            children: [
+              new TextRun({ text: "Date: ", bold: true }),
+              new TextRun(today)
+            ]
+          }),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: "--------------------------------------------------------------------------------", alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          ...momContent.split('\n').map((line: string) => new Paragraph({ text: line })),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: "--------------------------------------------------------------------------------", alignment: AlignmentType.CENTER }),
+          new Paragraph({ text: "" }),
+          new Paragraph({ text: "Member Secretary, CECB", alignment: AlignmentType.RIGHT }),
+          new Paragraph({ text: "Chhattisgarh Environment Conservation Board", alignment: AlignmentType.RIGHT }),
+        ],
+      }],
+    });
 
-    const templateContent = fs.readFileSync(templatePath, 'binary');
-    const zip = new PizZip(templateContent);
-    const doc = new Docxtemplater(zip, { linebreaks: true });
-
-    doc.setData({ projectName, date: today, content: momContent });
-    doc.render();
-
-    const output = doc.getZip().generate({ type: 'nodebuffer' });
+    const buffer = await Packer.toBuffer(doc);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', `attachment; filename="MoM-${app.id.slice(0, 8)}.docx"`);
-    return res.send(output);
+    return res.send(buffer);
   }
 
   throw new AppError(400, 'INVALID_FORMAT', 'Format must be pdf or docx');

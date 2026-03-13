@@ -15,7 +15,10 @@ export interface AuthenticatedRequest extends Request {
 export function authenticate(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
   try {
     const authHeader = req.headers.authorization;
-    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    let token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token && req.query.token && typeof req.query.token === 'string') {
+      token = req.query.token;
+    }
 
     if (!token) {
       res.status(401).json({ success: false, error: 'UNAUTHORIZED', message: 'Access token required' });

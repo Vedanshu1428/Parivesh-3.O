@@ -66,26 +66,32 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     byStatus,
     totalUsers,
     byRole,
+    bySector,
     recentApplications,
+    totalDocuments,
   ] = await Promise.all([
     prisma.application.count(),
     prisma.application.groupBy({ by: ['status'], _count: { status: true } }),
     prisma.user.count(),
     prisma.user.groupBy({ by: ['role'], _count: { role: true } }),
+    prisma.application.groupBy({ by: ['sector'], _count: { sector: true }, orderBy: { _count: { sector: 'desc' } }, take: 10 }),
     prisma.application.findMany({
-      take: 5,
+      take: 8,
       orderBy: { createdAt: 'desc' },
       include: { proponent: { select: { name: true } } },
     }),
+    prisma.document.count(),
   ]);
 
   res.json({
     success: true,
     data: {
       totalApplications,
+      totalDocuments,
       byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count.status])),
       totalUsers,
       byRole: Object.fromEntries(byRole.map((r) => [r.role, r._count.role])),
+      bySector: bySector.map(s => ({ sector: s.sector, count: s._count.sector })),
       recentApplications,
     },
   });

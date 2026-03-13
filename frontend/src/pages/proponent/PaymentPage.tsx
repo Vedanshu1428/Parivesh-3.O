@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
-import { CreditCard, CheckCircle, ArrowLeft, Copy } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Copy } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../lib/api';
 
@@ -13,7 +13,7 @@ export default function PaymentPage() {
   const [utrNumber, setUtrNumber] = useState('');
   const [step, setStep] = useState<'qr' | 'utr' | 'done'>('qr');
 
-  const { data: paymentData, isLoading, refetch } = useQuery({
+  const { data: paymentData, isLoading } = useQuery({
     queryKey: ['payment', id],
     queryFn: async () => {
       try {

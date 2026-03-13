@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  Users, FileText, ShieldCheck, Activity, AlertCircle, CheckCircle,
-  TrendingUp, Clock, ArrowRight
+  Users, FileText, ShieldCheck, Activity,
+  TrendingUp, Clock, ArrowRight, BarChart2, CheckCircle
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import api from '../../lib/api';
@@ -35,13 +35,14 @@ export default function AdminDashboard() {
   const stats = statsData || {};
   const byStatus: Record<string, number> = stats.byStatus || {};
   const chartData = Object.entries(byStatus).map(([status, count]) => ({ status, count }));
-  const pieData = Object.entries(byStatus).map(([name, value]) => ({ name, value }));
+  const sectorData: { sector: string; count: number }[] = stats.bySector || [];
 
   const topCards = [
-    { label: 'Total Applications', value: stats.totalApplications || 0, Icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Total Users', value: stats.totalUsers || 0, Icon: Users, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Pending Scrutiny', value: (byStatus['SUBMITTED'] || 0) + (byStatus['UNDER_SCRUTINY'] || 0), Icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Finalized', value: byStatus['FINALIZED'] || 0, Icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-50' },
+    { label: 'Total Applications', value: stats.totalApplications || 0, Icon: FileText,      color: 'text-blue-600',   bg: 'bg-blue-50'   },
+    { label: 'Total Documents',    value: stats.totalDocuments    || 0, Icon: ShieldCheck,   color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { label: 'Total Users',        value: stats.totalUsers        || 0, Icon: Users,          color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Pending Scrutiny',   value: (byStatus['SUBMITTED'] || 0) + (byStatus['UNDER_SCRUTINY'] || 0), Icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Finalized',          value: byStatus['FINALIZED'] || 0, Icon: CheckCircle,   color: 'text-green-600',  bg: 'bg-green-50'  },
   ];
 
   return (
@@ -142,6 +143,24 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Sector breakdown */}
+      {sectorData.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <BarChart2 className="w-4 h-4 text-primary" /> Applications by Sector
+          </h2>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={sectorData} layout="vertical" margin={{ top: 0, right: 20, left: 80, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11 }} />
+              <YAxis dataKey="sector" type="category" tick={{ fontSize: 11 }} width={80} />
+              <Tooltip formatter={(v) => [v, 'Applications']} />
+              <Bar dataKey="count" fill="#1B5E20" radius={[0, 4, 4, 0]} maxBarSize={24} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* Recent applications */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">

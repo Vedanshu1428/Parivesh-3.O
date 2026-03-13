@@ -28,6 +28,9 @@ import AdminDashboard from './pages/admin/Dashboard';
 import AuditLog from './pages/admin/AuditLog';
 import UserManagement from './pages/admin/UserManagement';
 
+// Shared pages
+import ApplicationList from './pages/ApplicationList';
+
 function RequireAuth({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
   const user = useAuthStore((s) => s.user);
   if (!user) return <Navigate to="/login" replace />;
@@ -80,7 +83,8 @@ export default function App() {
         <Route path="admin/audit/:id" element={<RequireAuth roles={['ADMIN']}><AuditLog /></RequireAuth>} />
         <Route path="admin/users" element={<RequireAuth roles={['ADMIN']}><UserManagement /></RequireAuth>} />
 
-        {/* Shared application detail */}
+        {/* Shared application list */}
+        <Route path="application" element={<RequireAuth><ApplicationList /></RequireAuth>} />
         <Route path="application/:id" element={<RequireAuth><ApplicationDetail /></RequireAuth>} />
       </Route>
 

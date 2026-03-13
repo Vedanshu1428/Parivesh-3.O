@@ -1,6 +1,6 @@
 import { prisma } from '../utils/prisma';
 import { logger } from '../utils/logger';
-import { auditLog } from '../services/auditChain';
+import { auditChainService } from '../services/auditChain';
 // import cron from 'node-cron';
 
 /**
@@ -33,10 +33,14 @@ export const checkSLAEscalations = async () => {
       for (const app of overdueApplications) {
         // e.g. Notify senior officers, update internal escalation flag, etc.
         // Creating an audit log entry for the system action
-        await auditLog('SYSTEM_ESCALATION', 'SYSTEM', {
+        await auditChainService.log({
+          eventType: 'SYSTEM_ESCALATION',
+          actorId: 'SYSTEM',
           applicationId: app.id,
-          message: 'SLA threshold (30 days) exceeded in current status',
-          previousStatus: app.status
+          payload: {
+            message: 'SLA threshold (30 days) exceeded in current status',
+            previousStatus: app.status
+          }
         });
       }
     } else {

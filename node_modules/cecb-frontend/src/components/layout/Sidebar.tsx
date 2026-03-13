@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard, FileText, Plus, ShieldCheck, BookOpen,
-  Users, LogOut, Activity, Settings, ChevronRight
+  Users, LogOut, Activity, ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import api from '../../lib/api';
