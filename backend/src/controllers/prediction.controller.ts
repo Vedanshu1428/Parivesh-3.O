@@ -18,7 +18,7 @@ export const getLivePrediction = async (req: Request, res: Response) => {
     edsCount: edsCount ? Number(edsCount) : 0
   };
 
-  const prediction = computePrediction(input);
+  const prediction = await computePrediction(input);
   res.json({ success: true, data: prediction });
 };
 
@@ -42,6 +42,6 @@ export const getApplicationPrediction = async (req: Request, res: Response) => {
     edsCount: app.edsNotices?.length || 0
   };
 
-  const prediction = computePrediction(input);
+  const prediction = await computePrediction(input);
   res.json({ success: true, data: prediction });
 };

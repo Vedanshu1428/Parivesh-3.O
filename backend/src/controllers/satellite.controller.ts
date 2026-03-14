@@ -36,5 +36,17 @@ export const satelliteController = {
       console.error('[SatelliteController] analyzeApplication error:', error);
       res.status(500).json({ error: (error as Error).message });
     }
+  },
+
+  async findIndustrialZones(req: Request, res: Response) {
+    try {
+      const { lat, lng } = req.query;
+      if (!lat || !lng) return res.status(400).json({ error: 'Missing coordinates' });
+      
+      const zones = await satelliteService.findIndustrialZones(parseFloat(lat as string), parseFloat(lng as string));
+      res.json({ success: true, data: zones });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to fetch zones' });
+    }
   }
 };

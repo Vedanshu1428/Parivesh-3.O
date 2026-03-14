@@ -59,7 +59,7 @@ export default function PredictionCard({ prediction, isLoading, error }: Predict
     <motion.div 
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden"
+      className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"
     >
       {/* Header section */}
       <div className="p-5 border-b border-gray-100 bg-gradient-to-br from-gray-50 to-white flex justify-between items-start">
