@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ChevronRight, ChevronLeft, Check, MapPin } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, MapPin, AlertTriangle, Info } from 'lucide-react';
 import api from '../../lib/api';
 import GISMap from '../../components/GISMap';
 import DocumentUpload from '../../components/DocumentUpload';
@@ -50,11 +50,19 @@ export default function NewApplication() {
   const lat = watch('lat');
   const lng = watch('lng');
 
-  // Fetch GIS risk flags whenever lat/lng are set
+  // Fetch GIS risk flags whenever lat/lng are set (Existing local DB check)
   const { data: gisData } = useQuery({
     queryKey: ['gis-check', lat, lng],
     queryFn: () => api.get(`/gis/check?lat=${lat}&lng=${lng}`).then(r => r.data.data),
     enabled: !!(lat && lng),
+  });
+
+  // Fetch Live Satellite Hackathon Data whenever lat/lng change
+  const { data: satelliteData, isFetching: isSatelliteLoading } = useQuery({
+    queryKey: ['satellite-check', lat, lng],
+    queryFn: () => api.get(`/satellite/analyze?lat=${lat}&lng=${lng}`).then(r => r.data.data),
+    enabled: !!(lat && lng),
+    staleTime: 60000,
   });
 
   // Step 1: Create draft application
@@ -219,12 +227,51 @@ export default function NewApplication() {
                 />
 
                 {lat && lng ? (
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
-                    <MapPin className="w-4 h-4" />
-                    Pin set at <strong>{lat.toFixed(5)}, {lng.toFixed(5)}</strong>
-                    {gisData?.riskFlags?.length > 0 && (
-                      <span className="ml-2 text-orange-600 font-medium">⚠️ {gisData.riskFlags.length} risk flag(s) detected</span>
-                    )}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
+                      <MapPin className="w-4 h-4" />
+                      Pin set at <strong>{lat.toFixed(5)}, {lng.toFixed(5)}</strong>
+                      {gisData?.riskFlags?.length > 0 && (
+                        <span className="ml-2 text-orange-600 font-medium">⚠️ {gisData.riskFlags.length} risk flag(s) detected</span>
+                      )}
+                    </div>
+                    
+                    {/* Hackathon Satellite Verification Alerts */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                       <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                         <h3 className="font-semibold text-gray-900 text-sm">Live Satellite Verification</h3>
+                         {isSatelliteLoading && <span className="text-xs text-blue-600 animate-pulse">Scanning area...</span>}
+                       </div>
+                       <div className="p-3">
+                          {isSatelliteLoading ? (
+                             <div className="h-10 flex items-center justify-center">
+                               <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                             </div>
+                          ) : satelliteData ? (
+                             <div className="space-y-2">
+                               {satelliteData.findings.length > 0 ? (
+                                 satelliteData.findings.map((f: string, i: number) => (
+                                   <div key={i} className="flex items-start gap-2 text-sm bg-orange-50 text-orange-800 p-2.5 rounded-lg border border-orange-100">
+                                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-orange-600" />
+                                      <span><strong>Alert:</strong> {f}</span>
+                                   </div>
+                                 ))
+                               ) : (
+                                 <div className="flex items-start gap-2 text-sm bg-green-50 text-green-800 p-2.5 rounded-lg border border-green-100">
+                                   <Check className="w-4 h-4 shrink-0 mt-0.5 text-green-600" />
+                                   <span>Area is clear. No immediate forests or water bodies detected within 5km.</span>
+                                 </div>
+                               )}
+                               <div className="text-xs text-gray-400 mt-2 flex items-center gap-1">
+                                 <Info className="w-3 h-3" /> Powered by OpenStreetMap Overpass AI Verification
+                               </div>
+                             </div>
+                          ) : (
+                             <p className="text-sm text-gray-500 text-center py-2">Verification results will appear here.</p>
+                          )}
+                       </div>
+                    </div>
+
                   </div>
                 ) : (
                   <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">

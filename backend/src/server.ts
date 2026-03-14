@@ -26,6 +26,7 @@ import auditRoutes from './routes/audit';
 import adminRoutes from './routes/admin';
 import gisRoutes from './routes/gis';
 import notificationRoutes from './routes/notifications';
+import satelliteRoutes from './routes/satellite';
 
 export const app = express();
 const httpServer = http.createServer(app);
@@ -103,6 +104,7 @@ app.use('/api/gist', apiLimiter, gistRoutes);
 app.use('/api/audit', apiLimiter, auditRoutes);
 app.use('/api/admin', apiLimiter, adminRoutes);
 app.use('/api/gis', apiLimiter, gisRoutes);
+app.use('/api/satellite', apiLimiter, satelliteRoutes);
 app.use('/api/notifications', apiLimiter, notificationRoutes);
 
 // ─── Static uploads (local storage fallback) ──────────────────────────────────
