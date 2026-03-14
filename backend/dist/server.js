@@ -30,6 +30,7 @@ const audit_1 = __importDefault(require("./routes/audit"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const gis_1 = __importDefault(require("./routes/gis"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
+const satellite_1 = __importDefault(require("./routes/satellite"));
 exports.app = (0, express_1.default)();
 const httpServer = http_1.default.createServer(exports.app);
 // ─── Socket.io ───────────────────────────────────────────────────────────────
@@ -95,6 +96,7 @@ exports.app.use('/api/gist', apiLimiter, gist_1.default);
 exports.app.use('/api/audit', apiLimiter, audit_1.default);
 exports.app.use('/api/admin', apiLimiter, admin_1.default);
 exports.app.use('/api/gis', apiLimiter, gis_1.default);
+exports.app.use('/api/satellite', apiLimiter, satellite_1.default);
 exports.app.use('/api/notifications', apiLimiter, notifications_1.default);
 // ─── Static uploads (local storage fallback) ──────────────────────────────────
 exports.app.use('/uploads', express_1.default.static('uploads'));

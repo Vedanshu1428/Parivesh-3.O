@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, CheckCircle, Search, FileText, Bot, ShieldCheck } from 'lucide-react';
+import { CheckCircle, Search, FileText, Bot, ShieldCheck } from 'lucide-react';
 
 const PIPELINE_STEPS = [
   { id: 'upload', label: 'Document Upload', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50' },

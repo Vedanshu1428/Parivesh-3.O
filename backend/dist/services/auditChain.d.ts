@@ -5,6 +5,7 @@ interface AuditLogInput {
     payload?: any;
 }
 declare class AuditChainService {
+    private stableStringify;
     log(input: AuditLogInput): Promise<void>;
     /**
      * Verify the full chain integrity (SHA3-256 Merkle chain)

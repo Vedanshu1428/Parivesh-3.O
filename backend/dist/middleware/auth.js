@@ -10,7 +10,10 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 function authenticate(req, res, next) {
     try {
         const authHeader = req.headers.authorization;
-        const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        let token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+        if (!token && req.query.token && typeof req.query.token === 'string') {
+            token = req.query.token;
+        }
         if (!token) {
             res.status(401).json({ success: false, error: 'UNAUTHORIZED', message: 'Access token required' });
             return;

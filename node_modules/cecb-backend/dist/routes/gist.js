@@ -1,15 +1,8 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
 const PdfPrinter = require('pdfmake');
-const docxtemplater_1 = __importDefault(require("docxtemplater"));
-const pizzip_1 = __importDefault(require("pizzip"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 const prisma_1 = require("../utils/prisma");
 const errorHandler_1 = require("../middleware/errorHandler");
 const auth_1 = require("../middleware/auth");
@@ -52,11 +45,13 @@ router.post('/:applicationId/lock', auth_1.authenticate, (0, auth_1.requireRole)
         throw new errorHandler_1.AppError(404, 'NOT_FOUND', 'Application not found');
     if (app.momLocked)
         throw new errorHandler_1.AppError(400, 'ALREADY_LOCKED', 'MoM already locked');
-    if (!app.momText)
+    if (!app.momText && !app.gistText)
         throw new errorHandler_1.AppError(400, 'MISSING_MOM', 'MoM text required before locking');
+    // Automatically copy the gist text into momText if locking an untouched gist
+    const finalMomText = app.momText || app.gistText;
     const updated = await prisma_1.prisma.application.update({
         where: { id: req.params.applicationId },
-        data: { momLocked: true, momLockedAt: new Date(), status: 'FINALIZED' },
+        data: { momLocked: true, momLockedAt: new Date(), status: 'FINALIZED', momText: finalMomText },
     });
     await auditChain_1.auditChainService.log({
         eventType: 'MOM_LOCKED',
@@ -75,17 +70,19 @@ router.get('/:applicationId/export', auth_1.authenticate, (0, errorHandler_1.asy
     });
     if (!app)
         throw new errorHandler_1.AppError(404, 'NOT_FOUND', 'Application not found');
-    if (!app.momText)
+    if (!app.momText && !app.gistText)
         throw new errorHandler_1.AppError(400, 'NO_MOM', 'MoM has not been generated yet');
     const momContent = app.momText || app.gistText || '';
     const projectName = app.projectName;
     const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
     if (format === 'pdf') {
         const fonts = {
-            Roboto: {
-                normal: 'node_modules/pdfmake/build/vfs_fonts.js',
-                bold: 'node_modules/pdfmake/build/vfs_fonts.js',
-            },
+            Helvetica: {
+                normal: 'Helvetica',
+                bold: 'Helvetica-Bold',
+                italics: 'Helvetica-Oblique',
+                bolditalics: 'Helvetica-BoldOblique'
+            }
         };
         const printer = new PdfPrinter(fonts);
         const docDefinition = {
@@ -111,7 +108,7 @@ router.get('/:applicationId/export', auth_1.authenticate, (0, errorHandler_1.asy
                 signature: { fontSize: 11, bold: true, margin: [0, 4, 0, 0] },
                 signatureSub: { fontSize: 9, color: '#555' },
             },
-            defaultStyle: { font: 'Roboto' },
+            defaultStyle: { font: 'Helvetica' },
         };
         const pdfDoc = printer.createPdfKitDocument(docDefinition);
         res.setHeader('Content-Type', 'application/pdf');
@@ -121,23 +118,50 @@ router.get('/:applicationId/export', auth_1.authenticate, (0, errorHandler_1.asy
         return;
     }
     if (format === 'docx') {
-        // Simple DOCX using docxtemplater with embedded template
-        const templatePath = path_1.default.join(__dirname, '../templates/mom_template.docx');
-        if (!fs_1.default.existsSync(templatePath)) {
-            // Fallback: send plain text as .txt
-            res.setHeader('Content-Type', 'text/plain');
-            res.setHeader('Content-Disposition', `attachment; filename="MoM-${app.id.slice(0, 8)}.txt"`);
-            return res.send(momContent);
-        }
-        const templateContent = fs_1.default.readFileSync(templatePath, 'binary');
-        const zip = new pizzip_1.default(templateContent);
-        const doc = new docxtemplater_1.default(zip, { linebreaks: true });
-        doc.setData({ projectName, date: today, content: momContent });
-        doc.render();
-        const output = doc.getZip().generate({ type: 'nodebuffer' });
+        const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = require('docx');
+        const doc = new Document({
+            sections: [{
+                    properties: {},
+                    children: [
+                        new Paragraph({
+                            text: "CHHATTISGARH ENVIRONMENT CONSERVATION BOARD",
+                            heading: HeadingLevel.HEADING_1,
+                            alignment: AlignmentType.CENTER,
+                        }),
+                        new Paragraph({
+                            text: "MINUTES OF MEETING",
+                            heading: HeadingLevel.HEADING_2,
+                            alignment: AlignmentType.CENTER,
+                        }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: "Project: ", bold: true }),
+                                new TextRun(projectName)
+                            ]
+                        }),
+                        new Paragraph({
+                            children: [
+                                new TextRun({ text: "Date: ", bold: true }),
+                                new TextRun(today)
+                            ]
+                        }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "--------------------------------------------------------------------------------", alignment: AlignmentType.CENTER }),
+                        new Paragraph({ text: "" }),
+                        ...momContent.split('\n').map((line) => new Paragraph({ text: line })),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "--------------------------------------------------------------------------------", alignment: AlignmentType.CENTER }),
+                        new Paragraph({ text: "" }),
+                        new Paragraph({ text: "Member Secretary, CECB", alignment: AlignmentType.RIGHT }),
+                        new Paragraph({ text: "Chhattisgarh Environment Conservation Board", alignment: AlignmentType.RIGHT }),
+                    ],
+                }],
+        });
+        const buffer = await Packer.toBuffer(doc);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
         res.setHeader('Content-Disposition', `attachment; filename="MoM-${app.id.slice(0, 8)}.docx"`);
-        return res.send(output);
+        return res.send(buffer);
     }
     throw new errorHandler_1.AppError(400, 'INVALID_FORMAT', 'Format must be pdf or docx');
 }));

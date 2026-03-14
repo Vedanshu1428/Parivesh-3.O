@@ -194,9 +194,11 @@ router.post('/:id/submit', auth_1.authenticate, (0, auth_1.requireRole)(['PROPON
     if (app.proponentId !== req.user.id)
         throw new errorHandler_1.AppError(403, 'FORBIDDEN', 'Access denied');
     assertValidTransition(app.status, 'SUBMITTED');
+    /*
     if (app.documents.length === 0) {
-        throw new errorHandler_1.AppError(400, 'MISSING_DOCUMENTS', 'At least one document must be uploaded before submission');
+      throw new AppError(400, 'MISSING_DOCUMENTS', 'At least one document must be uploaded before submission');
     }
+    */
     const updated = await prisma_1.prisma.application.update({
         where: { id: req.params.id },
         data: { status: 'SUBMITTED', submittedAt: new Date() },

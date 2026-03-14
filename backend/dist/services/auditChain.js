@@ -5,10 +5,19 @@ const js_sha3_1 = require("js-sha3");
 const prisma_1 = require("../utils/prisma");
 const logger_1 = require("../utils/logger");
 class AuditChainService {
+    stableStringify(obj) {
+        if (obj === null || typeof obj !== 'object') {
+            return JSON.stringify(obj);
+        }
+        if (Array.isArray(obj)) {
+            return '[' + obj.map(item => this.stableStringify(item)).join(',') + ']';
+        }
+        const keys = Object.keys(obj).sort();
+        return '{' + keys.map(k => `"${k}":${this.stableStringify(obj[k])}`).join(',') + '}';
+    }
     async log(input) {
         try {
-            const payloadJson = JSON.stringify(input.payload || {});
-            const payloadHash = (0, js_sha3_1.sha3_256)(payloadJson);
+            const payloadHash = (0, js_sha3_1.sha3_256)(this.stableStringify(input.payload || {}));
             // Get the last entry's chain hash
             const lastEntry = await prisma_1.prisma.auditChain.findFirst({
                 orderBy: { id: 'desc' },
@@ -44,7 +53,7 @@ class AuditChainService {
             return { valid: true, totalEntries: 0 };
         let expectedPrevHash = (0, js_sha3_1.sha3_256)('GENESIS');
         for (const entry of entries) {
-            const recomputedPayloadHash = (0, js_sha3_1.sha3_256)(JSON.stringify(entry.payload || {}));
+            const recomputedPayloadHash = (0, js_sha3_1.sha3_256)(this.stableStringify(entry.payload || {}));
             if (recomputedPayloadHash !== entry.payloadHash) {
                 return { valid: false, brokenAt: entry.id, totalEntries: entries.length };
             }
