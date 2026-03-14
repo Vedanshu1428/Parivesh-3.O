@@ -1,3 +1,12 @@
+ main
+node_modules/
+dist/
+build/
+.env
+.prisma/
+*.log
+.DS_Store
+
 # Node.js
 node_modules/
 npm-debug.log*
@@ -43,3 +52,4 @@ backend/prisma/*.db-journal
 # Temporary files
 .temp/
 tmp/
+main

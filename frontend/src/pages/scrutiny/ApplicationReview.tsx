@@ -4,10 +4,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useMutation as useMut } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { ArrowLeft, CheckCircle, AlertTriangle, SendHorizonal, FileCheck, CreditCard } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertTriangle, SendHorizonal, FileCheck, CreditCard, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import api from '../../lib/api';
 import StatusBadge from '../../components/StatusBadge';
+import IntelligentDocumentVerification from '../../components/IntelligentDocumentVerification';
+import SatelliteVerificationMap from '../../components/SatelliteVerificationMap';
+import EnvironmentalRiskReport from '../../components/EnvironmentalRiskReport';
 
 export default function ApplicationReview() {
   const { id } = useParams<{ id: string }>();
@@ -20,6 +23,15 @@ export default function ApplicationReview() {
     queryKey: ['application', id],
     queryFn: () => api.get(`/applications/${id}`).then((r) => r.data.data),
     enabled: !!id,
+  });
+
+  const analyzeSatelliteMutation = useMut({
+    mutationFn: () => api.post(`/satellite/analyze/${id}`),
+    onSuccess: () => {
+      toast.success('Geospatial analysis completed');
+      void queryClient.invalidateQueries({ queryKey: ['application', id] });
+    },
+    onError: () => toast.error('Failed to run geospatial analysis'),
   });
 
   const issuedEdsMutation = useMut({
@@ -105,6 +117,35 @@ export default function ApplicationReview() {
             </div>
           </div>
 
+          {/* Satellite Verification (Hackathon Feature) */}
+          {(app.lat && app.lng) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {app.satelliteReport ? (
+                 <>
+                   <EnvironmentalRiskReport report={app.satelliteReport} />
+                   <SatelliteVerificationMap report={app.satelliteReport} className="h-[280px] w-full rounded-xl" />
+                 </>
+               ) : (
+                 <div className="col-span-2 bg-blue-50 rounded-xl border border-blue-200 p-6 flex flex-col items-center justify-center text-center space-y-3">
+                    <MapPin className="w-8 h-8 text-blue-500" />
+                    <div>
+                      <h3 className="font-semibold text-blue-900">Geospatial Analysis Pending</h3>
+                      <p className="text-sm text-blue-700">Coordinates found ({app.lat}, {app.lng}). Run verification to detect nearby environmental risks.</p>
+                    </div>
+                    <button
+                      onClick={() => analyzeSatelliteMutation.mutate()}
+                      disabled={analyzeSatelliteMutation.isPending}
+                      className="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+                    >
+                       {analyzeSatelliteMutation.isPending ? 'Analyzing...' : 'Run Satellite Verification'}
+                    </button>
+                 </div>
+               )}
+            </div>
+          )}
+
+          {/* Intelligent Document Verification */}
+          <IntelligentDocumentVerification />
 
           {/* Documents to verify */}
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">

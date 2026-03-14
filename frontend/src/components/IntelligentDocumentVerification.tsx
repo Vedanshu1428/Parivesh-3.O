@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, FileText, Check, AlertTriangle, X, ShieldCheck, Zap, Database, Brain, Search, Layout, Code } from 'lucide-react';
+import { 
+  FileText, Check, AlertTriangle, X, ShieldCheck, 
+  Zap, Database, Brain, Search, Layout, Code, CheckCircle, Bot 
+} from 'lucide-react';
 import api from '../lib/api';
 
 interface VerifiedDocument {
@@ -44,12 +47,11 @@ const MOCK_DOCS: VerifiedDocument[] = [
 ];
 
 const PIPELINE_STEPS = [
-  'PDF Upload',
-  'ClamAV scan',
-  'Tesseract OCR',
-  'HuggingFace classifier',
-  'Completeness NLP',
-  'Flag / Approve',
+  { id: 'upload', label: 'Document Upload', icon: FileText, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+  { id: 'scan', label: 'ClamAV Security Scan', icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50' },
+  { id: 'ocr', label: 'Tesseract OCR', icon: Search, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { id: 'classify', label: 'HuggingFace Classifier', icon: Bot, color: 'text-purple-600', bg: 'bg-purple-50' },
+  { id: 'complete', label: 'Completeness Check', icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-50' }
 ];
 
 const TECH_STACK = [
@@ -77,27 +79,19 @@ export default function IntelligentDocumentVerification({ title = "Intelligent D
         <p className="text-gray-400 text-sm leading-relaxed max-w-2xl">
           Every uploaded PDF undergoes a multi-stage AI inspection: Malware scanning, OCR extraction, and NLP-based classification with automated deficiency flagging.
         </p>
-      </div>
-
-      {/* Tabs */}
-      <div className="px-6 flex items-center gap-6 border-b border-gray-700">
-        {['Pipeline', 'Live Demo', 'Tech Stack'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab as any)}
-            className={`py-3 text-sm font-medium transition-colors relative ${
-              activeTab === tab ? 'text-green-400' : 'text-gray-400 hover:text-gray-200'
-            }`}
-          >
-            {tab}
-            {activeTab === tab && (
-              <motion.div
-                layoutId="activeTab"
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-green-400"
-              />
-            )}
-          </button>
-        ))}
+        
+        {/* Navigation Tabs */}
+        <div className="flex gap-4 mt-6">
+          {(['Pipeline', 'Live Demo', 'Tech Stack'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`text-xs font-bold uppercase tracking-wider pb-2 border-b-2 transition-all ${activeTab === tab ? 'text-green-400 border-green-400' : 'text-gray-500 border-transparent hover:text-gray-300'}`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab Content */}
@@ -106,25 +100,40 @@ export default function IntelligentDocumentVerification({ title = "Intelligent D
         {activeTab === 'Pipeline' && (
           <div className="space-y-6">
             {/* Visual Pipeline */}
-            <div className="flex flex-wrap items-center gap-2 mb-8">
-              {PIPELINE_STEPS.map((step, index) => (
-                <div key={step} className="flex items-center gap-2">
+            <div className="bg-[#121212] rounded-lg border border-gray-800 p-4 mb-8">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-3 relative">
+                {/* Connecting line for desktop */}
+                <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gray-800 -z-0 -translate-y-1/2" />
+                
+                {PIPELINE_STEPS.map((step, index) => (
                   <motion.div 
-                    animate={index === 2 ? { boxShadow: ['0 0 0 0px rgba(74, 222, 128, 0)', '0 0 0 4px rgba(74, 222, 128, 0.2)', '0 0 0 0px rgba(74, 222, 128, 0)'] } : {}}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                    className={`px-3 py-1.5 bg-[#1e1e1e] border rounded-md text-xs font-medium whitespace-nowrap ${index === 2 ? 'border-green-500/50 text-green-400' : 'border-gray-700 text-gray-300'}`}
+                    key={step.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="flex flex-col items-center gap-2 bg-[#1e1e1e] p-3 rounded-lg border border-gray-700 shadow-sm w-full md:w-32 z-10 shrink-0"
                   >
-                    {step}
+                    <div className={`w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center shrink-0 border border-gray-700`}>
+                      <step.icon className="w-5 h-5 text-green-400" />
+                    </div>
+                    <span className="text-[10px] font-semibold text-gray-300 text-center leading-tight">
+                      {step.label}
+                    </span>
                   </motion.div>
-                  {index < PIPELINE_STEPS.length - 1 && (
-                    <ArrowRight className="w-3.5 h-3.5 text-gray-500" />
-                  )}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
             {/* Document List */}
             <div className="space-y-3">
+              <div className="text-xs text-gray-500 bg-blue-500/5 p-3 rounded-lg border border-blue-500/10 flex items-start gap-2 mb-4">
+                <Bot className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
+                <p>
+                  Documents listed below have already passed through this pipeline. 
+                  Deficiencies are auto-flagged prior to manual review.
+                </p>
+              </div>
+
               {MOCK_DOCS.map((doc) => (
                 <div
                   key={doc.id}
