@@ -266,6 +266,7 @@ export default function ApplicationDetail() {
 
             <DocumentUpload
               applicationId={app.id}
+              sector={app.sector}
               existingDocs={app.documents ?? []}
               canUpload={canEdit && showUpload}
             />

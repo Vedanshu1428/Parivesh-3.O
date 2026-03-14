@@ -4,16 +4,12 @@ import toast from 'react-hot-toast';
 import { Upload, File, Trash2, CheckCircle, Loader2, AlertCircle } from 'lucide-react';
 import api from '../lib/api';
 
-const DOC_TYPES = [
-  { value: 'FORM_1',                          label: 'Form I' },
-  { value: 'FORM_1A',                         label: 'Form IA' },
-  { value: 'ENVIRONMENTAL_IMPACT_ASSESSMENT', label: 'EIA Report' },
-  { value: 'PRE_FEASIBILITY_REPORT',          label: 'Pre-Feasibility Report' },
-  { value: 'MAP_TOPOSHEET',                   label: 'Topo Sheet / Map' },
-  { value: 'FOREST_CLEARANCE',                label: 'Forest Clearance' },
-  { value: 'WATER_CONSENT',                   label: 'Water Consent (NOC)' },
-  { value: 'NOC',                             label: 'NOC / Other Consent' },
-  { value: 'OTHER',                           label: 'Other Document' },
+import DocumentChecklist from './DocumentChecklist';
+import { getRequiredDocuments } from '../../../shared/documentRequirements';
+
+// Keep a fallback or purely extra list if needed, or rely solely on dynamic checks
+const EXTRA_DOC_TYPES = [
+  { value: 'OTHER', label: 'Other Document' },
 ];
 
 interface UploadedDoc {
@@ -27,6 +23,7 @@ interface UploadedDoc {
 
 interface DocumentUploadProps {
   applicationId: string;
+  sector?: string; // Passed down to know requirements
   existingDocs?: UploadedDoc[];
   /** If false, only shows the existing docs without an upload form */
   canUpload?: boolean;
@@ -42,13 +39,16 @@ function formatBytes(bytes: number): string {
 
 export default function DocumentUpload({
   applicationId,
+  sector = 'Other',
   existingDocs = [],
   canUpload = true,
   onchange,
 }: DocumentUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
-  const [selectedType, setSelectedType] = useState('OTHER');
+  const dynamicDocTypes = [...getRequiredDocuments(sector), ...EXTRA_DOC_TYPES];
+  
+  const [selectedType, setSelectedType] = useState(dynamicDocTypes[0]?.value || 'OTHER');
   const [dragOver, setDragOver] = useState(false);
 
   const uploadMutation = useMutation({
@@ -96,6 +96,9 @@ export default function DocumentUpload({
 
   return (
     <div className="space-y-4">
+      {/* Visual Checklist showing required vs uploaded */}
+      <DocumentChecklist sector={sector} uploadedDocs={existingDocs} />
+
       {/* Upload area */}
       {canUpload && (
         <div className="space-y-3">
@@ -107,7 +110,7 @@ export default function DocumentUpload({
               onChange={e => setSelectedType(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary bg-white"
             >
-              {DOC_TYPES.map(dt => (
+              {dynamicDocTypes.map(dt => (
                 <option key={dt.value} value={dt.value}>{dt.label}</option>
               ))}
             </select>
@@ -166,7 +169,7 @@ export default function DocumentUpload({
                 <div className="text-sm font-medium text-gray-900 truncate">{doc.fileName}</div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-gray-500">
-                    {DOC_TYPES.find(dt => dt.value === doc.docType)?.label || doc.docType.replace(/_/g, ' ')}
+                    {dynamicDocTypes.find(dt => dt.value === doc.docType)?.label || doc.docType.replace(/_/g, ' ')}
                   </span>
                   <span className="text-gray-300">•</span>
                   <span className="text-xs text-gray-400">{formatBytes(doc.fileSizeBytes)}</span>
