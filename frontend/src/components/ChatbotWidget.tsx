@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Bot, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
-import api from '../lib/axios';
+import axios from 'axios';
 import ReactMarkdown from 'react-markdown';
 import { Link } from 'react-router-dom';
 
@@ -48,9 +48,9 @@ export const ChatbotWidget = () => {
 
     try {
       // Send the entire conversation history context to the backend
-      const response = await api.post('/api/chat', {
+      const response = await axios.post('http://localhost:3000/api/chat', {
         message: userMessage.content,
-        history: messages.slice(1) // Avoid sending the hardcoded welcome message multiple times
+        history: messages.slice(1)
       });
 
       const assistantMessage: ChatMessage = {
@@ -181,7 +181,7 @@ export const ChatbotWidget = () => {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={toggleChat}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-[#124b3f] text-white rounded-full shadow-xl text-center flex items-center justify-center hover:bg-[#1f7a66] transition-colors z-[100] focus:outline-none focus:ring-4 focus:ring-[#124b3f]/30"
+        className="fixed bottom-6 right-6 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-xl text-center flex items-center justify-center hover:bg-primary/90 transition-colors z-[9999] focus:outline-none focus:ring-4 focus:ring-primary/30"
       >
         {isOpen ? <X className="w-6 h-6" /> : <MessageSquare className="w-6 h-6" />}
       </motion.button>

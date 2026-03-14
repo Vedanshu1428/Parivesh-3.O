@@ -2,17 +2,20 @@ import { Router } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../middleware/errorHandler';
-import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
 // Initialize the Google GenAI SDK
 let ai: GoogleGenAI | null = null;
 try {
-  // @google/genai expects an empty config {} if using process.env.GEMINI_API_KEY implicitly
-  ai = new GoogleGenAI({});
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn("GEMINI_API_KEY is not set. Chatbot will be unavailable.");
+  } else {
+    ai = new GoogleGenAI({ apiKey });
+  }
 } catch (e) {
-  console.warn("GoogleGenAI initialized without API key. Chatbot will fail until configured.");
+  console.warn("GoogleGenAI initialization failed:", e);
 }
 
 const SYSTEM_INSTRUCTION = `
@@ -41,7 +44,7 @@ The platform accepts 5 major Project Categories. Here are the required documents
 - If they ask about approval chances, tell them we have an AI Predictive Engine on the "Review & Submit" page of their application that calculates exact odds.
 `;
 
-router.post('/', authenticate, asyncHandler(async (req: any, res: any, next: any) => {
+router.post('/', asyncHandler(async (req: any, res: any, next: any) => {
   if (!ai) {
     throw new AppError(500, 'The Chatbot is currently unavailable (Missing API Credentials).');
   }
