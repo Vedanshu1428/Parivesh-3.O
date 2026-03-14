@@ -1107,3 +1107,13 @@
 2026-03-14 03:25:45 [[32mhttp[39m]: ::1 - - [13/Mar/2026:21:55:45 +0000] "GET /api/notifications HTTP/1.1" 304 - "http://localhost:5173/dashboard/application" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
 2026-03-14 03:25:45 [[32mhttp[39m]: ::1 - - [13/Mar/2026:21:55:45 +0000] "GET /api/admin/stats HTTP/1.1" 304 - "http://localhost:5173/dashboard/admin" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
 2026-03-14 03:25:45 [[32mhttp[39m]: ::1 - - [13/Mar/2026:21:55:45 +0000] "GET /api/audit/chain/verify HTTP/1.1" 304 - "http://localhost:5173/dashboard/admin" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36"
+2026-03-14 13:43:44 [[31merror[39m]: PrismaClientInitializationError: Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    at t (D:\Projects\Parivesh-3.O\node_modules\@prisma\client\runtime\library.js:112:2488)
+    at async start (D:\Projects\Parivesh-3.O\backend\src\server.ts:124:5)
+2026-03-14 13:44:21 [[31merror[39m]: PrismaClientInitializationError: Can't reach database server at `localhost:5432`
+
+Please make sure your database server is running at `localhost:5432`.
+    at t (D:\Projects\Parivesh-3.O\node_modules\@prisma\client\runtime\library.js:112:2488)
+    at async start (D:\Projects\Parivesh-3.O\backend\src\server.ts:124:5)
