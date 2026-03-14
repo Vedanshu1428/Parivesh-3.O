@@ -10,6 +10,7 @@ import LandingPage from './pages/LandingPage';
 
 // Layouts
 import AppLayout from './components/layout/AppLayout';
+import ThemeProvider from './components/ThemeProvider';
 
 // Proponent pages
 import ProponentDashboard from './pages/proponent/Dashboard';
@@ -56,7 +57,7 @@ export default function App() {
   useSocketSetup();
 
   return (
-    <>
+    <ThemeProvider>
       <ChatbotWidget />
       <Routes>
         {/* Public */}
@@ -95,6 +96,6 @@ export default function App() {
         {/* Catch-all */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
-    </>
+    </ThemeProvider>
   );
 }

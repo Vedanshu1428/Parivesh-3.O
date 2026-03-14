@@ -38,44 +38,12 @@ interface IndustrialZone {
   lng: number;
 }
 
-const DISTRICT_DATA: Record<string, { center: [number, number], suggestions: IndustrialZone[] }> = {
-  'Raipur': {
-    center: [21.2514, 81.6296],
-    suggestions: [
-      { name: 'Siltara Industrial Area', lat: 21.3780, lng: 81.6700 },
-      { name: 'Urla Industrial Complex', lat: 21.3100, lng: 81.6100 },
-      { name: 'Bhanpuri Cluster', lat: 21.2900, lng: 81.6400 }
-    ]
-  },
-  'Bilaspur': {
-    center: [22.0797, 82.1391],
-    suggestions: [
-      { name: 'Sirgitti Industrial Area', lat: 22.0400, lng: 82.1200 },
-      { name: 'Tifra Industrial Estate', lat: 22.0600, lng: 82.0900 },
-      { name: 'Dagori', lat: 21.9500, lng: 82.0200 }
-    ]
-  },
-  'Durg': {
-    center: [21.1905, 81.2849],
-    suggestions: [
-      { name: 'Bhilai Industrial Area', lat: 21.2100, lng: 81.3500 },
-      { name: 'Borai Industrial Growth Centre', lat: 21.1200, lng: 81.2500 }
-    ]
-  },
-  'Korba': {
-    center: [22.3595, 82.7501],
-    suggestions: [
-      { name: 'Balco Industrial Area', lat: 22.3900, lng: 82.7300 },
-      { name: 'Amanala', lat: 22.3400, lng: 82.7100 }
-    ]
-  },
-  'Raigarh': {
-    center: [21.8974, 83.3950],
-    suggestions: [
-      { name: 'Punjipatra Industrial Area', lat: 22.1200, lng: 83.3200 },
-      { name: 'Tamnar Cluster', lat: 22.2100, lng: 83.4200 }
-    ]
-  }
+const DISTRICT_DATA: Record<string, { center: [number, number] }> = {
+  'Raipur': { center: [21.2514, 81.6296] },
+  'Bilaspur': { center: [22.0797, 82.1391] },
+  'Durg': { center: [21.1905, 81.2849] },
+  'Korba': { center: [22.3595, 82.7501] },
+  'Raigarh': { center: [21.8974, 83.3950] }
 };
 
 const SECTORS = [
@@ -118,6 +86,14 @@ export default function NewApplication() {
     }
   }, [district]);
 
+  // Fetch dynamic Industrial Zones based on mapViewCenter (Live GIS Data)
+  const { data: industrialZones, isFetching: isZonesLoading } = useQuery({
+    queryKey: ['industrial-zones', mapViewCenter],
+    queryFn: () => api.get(`/satellite/industrial-zones?lat=${mapViewCenter?.[0]}&lng=${mapViewCenter?.[1]}`).then(r => r.data.data),
+    enabled: !!mapViewCenter,
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+  });
+
   // Fetch GIS risk flags whenever lat/lng are set (Existing local DB check)
   const { data: gisData } = useQuery({
     queryKey: ['gis-check', lat, lng],
@@ -131,6 +107,13 @@ export default function NewApplication() {
     queryFn: () => api.get(`/satellite/analyze?lat=${lat}&lng=${lng}`).then(r => r.data.data),
     enabled: !!(lat && lng),
     staleTime: 60000,
+  });
+
+  // Fetch application details to get existing documents for the checklist
+  const { data: application } = useQuery({
+    queryKey: ['application', draftId],
+    queryFn: () => api.get(`/applications/${draftId}`).then(r => r.data.data),
+    enabled: !!draftId,
   });
 
   // Step 1: Create draft application
@@ -306,23 +289,32 @@ export default function NewApplication() {
                   height="360px"
                 />
 
-                {district && DISTRICT_DATA[district]?.suggestions.length > 0 && (
-                  <div className="space-y-2">
+                {district && (
+                  <div className="space-y-2 mt-4">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
-                      <Check className="w-3 h-3 text-primary" /> Suggested Industrial Areas in {district}
+                      <MapPin className="w-3 h-3 text-primary" /> Live Industrial Zones in {district}
                     </label>
-                    <div className="flex flex-wrap gap-2">
-                      {DISTRICT_DATA[district].suggestions.map((zone) => (
-                        <button
-                          key={zone.name}
-                          type="button"
-                          onClick={() => handleLocationChange(zone.lat, zone.lng)}
-                          className="px-3 py-1.5 bg-gray-50 border border-gray-200 hover:border-primary hover:bg-primary/5 rounded-full text-xs font-medium text-gray-700 transition-all flex items-center gap-1.5 shadow-sm"
-                        >
-                          <MapPin className="w-3 h-3 text-gray-400" />
-                          {zone.name}
-                        </button>
-                      ))}
+                    <div className="flex flex-wrap gap-2 text-sm text-gray-500">
+                      {isZonesLoading ? (
+                        <span className="flex items-center gap-2 text-xs text-blue-600 animate-pulse">
+                          <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                          Scanning state GIS database...
+                        </span>
+                      ) : industrialZones && industrialZones.length > 0 ? (
+                        industrialZones.map((zone: IndustrialZone) => (
+                          <button
+                            key={zone.name}
+                            type="button"
+                            onClick={() => handleLocationChange(zone.lat, zone.lng)}
+                            className="px-3 py-1.5 bg-gray-50 border border-gray-200 hover:border-primary hover:bg-primary/5 rounded-full text-xs font-medium text-gray-700 transition-all flex items-center gap-1.5 shadow-sm"
+                          >
+                            <Check className="w-3 h-3 text-gray-400" />
+                            {zone.name}
+                          </button>
+                        ))
+                      ) : (
+                        <span className="text-xs italic text-gray-400">No major industrial zones found nearby. Click map to set pin manually.</span>
+                      )}
                     </div>
                   </div>
                 )}
@@ -390,7 +382,11 @@ export default function NewApplication() {
                   Upload required documents: Form-I, Form-IA, EIA Report, Pre-Feasibility Report, Topo Sheet.
                 </p>
                 {draftId ? (
-                  <DocumentUpload applicationId={draftId} />
+                  <DocumentUpload 
+                    applicationId={draftId} 
+                    sector={watch('sector')} 
+                    existingDocs={application?.documents || []} 
+                  />
                 ) : (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
                     <p className="text-sm text-amber-700">⏳ Creating your draft application first…</p>

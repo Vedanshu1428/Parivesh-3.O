@@ -127,6 +127,53 @@ export class SatelliteService {
 
     return report;
   }
+
+  /**
+   * Finds industrial zones near a location to provide suggestions
+   */
+  async findIndustrialZones(lat: number, lng: number, radius = 20000): Promise<Array<{ name: string; lat: number; lng: number }>> {
+    const query = `
+      [out:json][timeout:25];
+      (
+        way["landuse"="industrial"](around:${radius},${lat},${lng});
+        way["industrial_estate"="yes"](around:${radius},${lat},${lng});
+        node["industrial_estate"="yes"](around:${radius},${lat},${lng});
+        node["industrial"="factory"](around:${radius},${lat},${lng});
+      );
+      out center;
+    `;
+
+    try {
+      const response = await axios.post(OVERPASS_URL, query, {
+        headers: { 'Content-Type': 'text/plain' },
+        timeout: 15000
+      });
+
+      const elements = response.data.elements || [];
+      const zones: Array<{ name: string; lat: number; lng: number }> = [];
+
+      elements.forEach((el: any) => {
+        const itemLat = el.lat || (el.center && el.center.lat);
+        const itemLng = el.lon || (el.center && el.center.lon);
+        if (!itemLat || !itemLng) return;
+
+        const tags = el.tags || {};
+        const name = tags.name || tags.operator || tags.description || 'Industrial Area';
+        
+        // Avoid duplicate generic names too close to each other
+        const isDuplicate = zones.some(z => z.name === name && Math.abs(z.lat - itemLat) < 0.01);
+        if (!isDuplicate) {
+          zones.push({ name, lat: itemLat, lng: itemLng });
+        }
+      });
+
+      // Sort by some heuristic or just return top results
+      return zones.slice(0, 8);
+    } catch (error) {
+      console.error('[SatelliteService] findIndustrialZones error:', error);
+      return []; // Return empty instead of throwing, to avoid blocking UI
+    }
+  }
 }
 
 export const satelliteService = new SatelliteService();

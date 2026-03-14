@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from '../NotificationBell';
+import ThemeToggle from '../ThemeToggle';
 import api from '../../lib/api';
 
 const ROLE_BADGE: Record<string, { label: string; color: string }> = {
@@ -70,6 +71,9 @@ export default function TopBar() {
           <Globe className="w-3.5 h-3.5" />
           {i18n.language === 'en' ? 'हिन्दी' : 'English'}
         </button>
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Notification Bell */}
         <NotificationBell />
