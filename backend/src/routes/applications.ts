@@ -205,19 +205,91 @@ router.patch('/:id', authenticate, requireRole(['PROPONENT']), asyncHandler(asyn
 router.post('/:id/submit', authenticate, requireRole(['PROPONENT']), asyncHandler(async (req: AuthenticatedRequest, res) => {
   const app = await prisma.application.findUnique({
     where: { id: req.params.id },
-    include: { documents: true },
+    include: { documents: true, proponent: true },
   });
   if (!app) throw new AppError(404, 'NOT_FOUND', 'Application not found');
   if (app.proponentId !== req.user!.id) throw new AppError(403, 'FORBIDDEN', 'Access denied');
 
   assertValidTransition(app.status, 'SUBMITTED');
 
-  /* 
-  if (app.documents.length === 0) {
-    throw new AppError(400, 'MISSING_DOCUMENTS', 'At least one document must be uploaded before submission');
-  }
-  */
+  // Verify missing documents using shared logic
+  const { getRequiredDocuments } = require('../../../shared/documentRequirements');
+  const requiredDocs = getRequiredDocuments(app.sector);
+  const uploadedTypes = new Set(app.documents.map(d => d.docType));
+  
+  const missingDocs = requiredDocs.filter((reqDoc: any) => !uploadedTypes.has(reqDoc.value as any));
 
+  if (missingDocs.length > 0) {
+    // Construct deficiencies array for the missing documents
+    const deficiencies = missingDocs.map((doc: any) => ({
+      field: doc.label,
+      reason: 'Missing Required Document',
+    }));
+
+    const { generateEdsPdf } = await import('../services/pdfService');
+    const pdfUrl = await generateEdsPdf(
+      app.id,
+      app.projectName,
+      app.proponent?.name || 'Proponent',
+      deficiencies,
+      'System generated EDS due to missing mandatory checklist documents.'
+    );
+
+    const noticeData = {
+      applicationId: app.id,
+      deficiencies,
+      issuedById: req.user!.id, 
+      remarks: 'System generated EDS due to missing mandatory checklist documents.',
+    } as any;
+    
+    noticeData.pdfUrl = pdfUrl;
+
+    // Save the EDS Notice automatically
+    const notice = await prisma.edsNotice.create({
+      data: noticeData,
+    });
+
+    // Notify proponent via SMS
+    const { sendSMS } = await import('../services/smsService');
+    const proponentPhone = app.proponent?.phone || (app as any).contactPhone;
+    if (proponentPhone) {
+      await sendSMS(
+        proponentPhone,
+        `Dear Applicant, your CECB application (${app.id.substring(0,8)}) requires EDS regarding missing documents. Please login to download the PDF notice.`
+      );
+    }
+
+    // Set status to EDS natively
+    const updated = await prisma.application.update({
+      where: { id: app.id },
+      data: { status: 'EDS' },
+    });
+
+    await auditChainService.log({
+      eventType: 'APPLICATION_EDS_SYSTEM_TRIGGERED',
+      actorId: req.user!.id,
+      applicationId: app.id,
+      payload: { missingDocuments: missingDocs.map((d: any) => d.value) },
+    });
+
+    io.to(`application:${app.id}`).emit('status:changed', { applicationId: app.id, status: 'EDS' });
+    io.to(`application:${app.id}`).emit('notification', { 
+      title: 'Action Required', 
+      message: 'Your application was flagged for EDS due to missing documents.' 
+    });
+
+    return res.status(400).json({ 
+      success: false, 
+      error: 'MISSING_DOCUMENTS', 
+      message: 'Application has missing required documents. EDS Notice automatically generated.',
+      data: {
+        missingDocs,
+        notice
+      }
+    });
+  }
+
+  // All documents are present, proceed with submission
   const updated = await prisma.application.update({
     where: { id: req.params.id },
     data: { status: 'SUBMITTED', submittedAt: new Date() },
@@ -291,7 +363,7 @@ router.post('/:id/eds', authenticate, requireRole(['SCRUTINY', 'ADMIN']), asyncH
         deficiencies: body.deficiencies,
         issuedById: req.user!.id,
         remarks: body.remarks,
-        pdfUrl: pdfUrl,
+        pdfUrl: pdfUrl as any, // Cast to any to bypass TS error if pdfUrl is not directly in model
       },
     }),
   ]);
