@@ -224,6 +224,7 @@ router.post('/:id/submit', authenticate, requireRole(['PROPONENT']), asyncHandle
     const deficiencies = missingDocs.map((doc: any) => ({
       field: doc.label,
       reason: 'Missing Required Document',
+      required: true,
     }));
 
     const { generateEdsPdf } = await import('../services/pdfService');
