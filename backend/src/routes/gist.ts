@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter = require('pdfmake');
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
@@ -197,6 +198,7 @@ router.get('/:applicationId/export', authenticate, asyncHandler(async (req: Auth
   }
 
   if (format === 'docx') {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ImageRun, Table, TableRow, TableCell, WidthType } = require('docx');
 
     const bodyParagraphs = momContent.split('\n').map((line: string) => {

@@ -38,13 +38,13 @@ RULES: Be concise, polite. Use bullet points. Always link to the right page when
 
 router.post('/', asyncHandler(async (req: any, res: any) => {
   if (!ai) {
-    throw new AppError(500, 'The Chatbot is currently unavailable (Missing API Credentials).');
+    throw new AppError(500, 'CHATBOT_UNAVAILABLE', 'The Chatbot is currently unavailable (Missing API Credentials).');
   }
 
   const { message, history = [] } = req.body;
 
   if (!message) {
-    throw new AppError(400, 'Message is required.');
+    throw new AppError(400, 'BAD_REQUEST', 'Message is required.');
   }
 
   try {
@@ -72,9 +72,9 @@ router.post('/', asyncHandler(async (req: any, res: any) => {
     console.error("Gemini Chatbot Error:", error.message || error);
     const msg = error.message || '';
     if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-      throw new AppError(503, 'The AI service is temporarily rate-limited. Please wait a moment and try again.');
+      throw new AppError(503, 'RATE_LIMITED', 'The AI service is temporarily rate-limited. Please wait a moment and try again.');
     }
-    throw new AppError(500, `AI Assistant Error: ${msg}`);
+    throw new AppError(500, 'AI_ERROR', `AI Assistant Error: ${msg}`);
   }
 }));
 

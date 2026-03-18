@@ -34,7 +34,8 @@ import axios from 'axios';
 export const computePrediction = async (input: PredictionInput): Promise<PredictionResult> => {
   try {
     // Forward the payload exactly to the new Scikit-Learn Python Microservice
-    const response = await axios.post('http://127.0.0.1:8000/predict', input);
+    const mlServiceUrl = process.env.ML_SERVICE_URL || 'http://127.0.0.1:8000';
+    const response = await axios.post(`${mlServiceUrl}/predict`, input);
     return response.data as PredictionResult;
   } catch (error) {
     console.error("ML Service Connection Error:", error);

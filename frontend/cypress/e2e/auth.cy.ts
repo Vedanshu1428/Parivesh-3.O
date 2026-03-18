@@ -1,3 +1,4 @@
+/// <reference types="cypress" />
 describe('Authentication Flow', () => {
   beforeEach(() => {
     // Clear state before each test

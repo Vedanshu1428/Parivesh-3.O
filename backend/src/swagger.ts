@@ -11,7 +11,10 @@ export function setupSwagger() {
         contact: { name: 'CECB Tech Team', email: 'tech@cecb.cg.gov.in' },
       },
       servers: [
-        { url: 'http://localhost:3000', description: 'Development server' },
+        { 
+          url: process.env.BASE_URL || 'http://localhost:3000', 
+          description: process.env.NODE_ENV === 'production' ? 'Production server' : 'Development server' 
+        },
       ],
       components: {
         securitySchemes: {

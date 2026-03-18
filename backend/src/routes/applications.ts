@@ -213,6 +213,7 @@ router.post('/:id/submit', authenticate, requireRole(['PROPONENT']), asyncHandle
   assertValidTransition(app.status, 'SUBMITTED');
 
   // Verify missing documents using shared logic
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getRequiredDocuments } = require('../../../shared/documentRequirements');
   const requiredDocs = getRequiredDocuments(app.sector);
   const uploadedTypes = new Set(app.documents.map(d => d.docType));
