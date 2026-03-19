@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { AlertTriangle, Trees, Waves, MapPin, Bird, Droplets } from 'lucide-react';
 
 // Fix Leaflet's broken default icon path (Vite asset handling issue)

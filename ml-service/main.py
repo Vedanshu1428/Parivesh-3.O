@@ -57,6 +57,16 @@ def predict_approval(data: PredictionInput):
     probabilities = classifier.predict_proba(input_aligned)
     approval_chance_raw = probabilities[0][1] * 100  # Extract probability of class '1' (Approved)
     
+    # Calculate confidence based on model certainty (distance from 0.5)
+    # If prob is 0.5, certainty is 0. If prob is 0 or 1, certainty is 100.
+    certainty = abs(probabilities[0][1] - 0.5) * 2 * 100
+    
+    # We use a base of 75% confidence (reflecting general system data quality) 
+    # plus a small boost for model certainty.
+    confidence = round(75 + (certainty * 0.20)) 
+    # Ensure it's never too low or too high for display
+    confidence = max(70, min(95, confidence))
+
     # 5. Infer Days Pipeline via Regression Algorithm
     estimated_days_raw = regressor.predict(input_aligned)[0]
     
@@ -68,12 +78,14 @@ def predict_approval(data: PredictionInput):
     risk_level = "High" if data.riskScore >= 70 else "Medium" if data.riskScore >= 50 else "Low"
     
     verdict = ""
-    if approval_chance >= 20:
-        verdict = f"Strong outlook for {data.district} {data.sector} projects — {approval_chance}% estimated approval rate based on 1000 AI data points."
-    elif approval_chance < 10:
-        verdict = f"Tough historical precedent for {data.district} {data.sector} projects. Ensure all compliances are meticulously fulfilled."
+    if approval_chance >= 70:
+        verdict = f"High probability ({approval_chance}%) of approval for {data.district} {data.sector} project. Historical data suggests strong compliance alignment."
+    elif approval_chance >= 40:
+        verdict = f"Moderate outlook ({approval_chance}%). {data.sector} projects in {data.district} typically require detailed EDS responses to ensure approval."
+    elif approval_chance >= 20:
+        verdict = f"Caution recommended ({approval_chance}%). Proposals in this category often face scrutiny. Ensure all environmental safeguards are robust."
     else:
-        verdict = f"Standard outlook for {data.district} {data.sector} projects. Approval depends heavily on robust documentation."
+        verdict = f"Challenging historical precedent ({approval_chance}%). {data.sector} projects in this area show high rejection rates. Meticulous documentation is required."
         
     stageBreakdown = {
         "scrutiny": round(estimated_days * 0.20),
@@ -87,13 +99,13 @@ def predict_approval(data: PredictionInput):
         "approvalChance": approval_chance,
         "estimatedDays": estimated_days,
         "riskLevel": risk_level,
-        "confidence": 85, # The python server's high data confidence backing
+        "confidence": confidence, 
         "verdict": verdict,
         "dataPoints": 1000,
         "stageBreakdown": stageBreakdown,
         "factors": [
-            { "name": "Python ML System", "impact": f"Scikit-Learn Probability: {approval_chance_raw:.1f}%", "direction": "positive" if approval_chance_raw > 15 else "negative" },
-            { "name": "Python Output", "impact": f"Random Forest Inference: {estimated_days_raw:.0f} days", "direction": "neutral" }
+            { "name": "Scikit-Learn Inference", "impact": f"Certainty: {certainty:.1f}%", "direction": "positive" if certainty > 60 else "neutral" },
+            { "name": "Historical Context", "impact": f"Probability: {approval_chance_raw:.1f}%", "direction": "positive" if approval_chance_raw > 60 else "negative" if approval_chance_raw < 30 else "neutral" }
         ]
     }
 

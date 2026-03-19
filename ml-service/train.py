@@ -54,7 +54,7 @@ print(f"Saved {len(features)} feature columns schema to 'model_columns.pkl'.")
 print("\n--- Training Approval Classifier (Random Forest) ---")
 X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(X, y_class, test_size=0.2, random_state=42)
 
-clf = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
+clf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
 clf.fit(X_train_c, y_train_c)
 
 # Evaluate Classifier
@@ -76,7 +76,7 @@ y_reg = df_approved['approval_days']
 
 X_train_r, X_test_r, y_train_r, y_test_r = train_test_split(X_reg, y_reg, test_size=0.2, random_state=42)
 
-reg = RandomForestRegressor(n_estimators=100, max_depth=10, random_state=42)
+reg = RandomForestRegressor(n_estimators=100, max_depth=5, random_state=42)
 reg.fit(X_train_r, y_train_r)
 
 # Evaluate Regressor
