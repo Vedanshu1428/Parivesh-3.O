@@ -1,1 +1,0 @@
-﻿src/components/IntelligentDocumentVerification.tsx(2,1): error TS6133: 'motion' is declared but its value is never read.
