@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { AlertTriangle, Trees, Waves, MapPin, Bird, Droplets } from 'lucide-react';
@@ -74,6 +74,22 @@ export default function GISMap({
   const circlesRef = useRef<L.Circle[]>([]);
   const [pinDropped, setPinDropped] = useState(!!(lat && lng));
 
+  const placeMarker = useCallback((map: L.Map, mlat: number, mlng: number) => {
+    if (markerRef.current) markerRef.current.remove();
+    const marker = L.marker([mlat, mlng], { draggable: interactive })
+      .addTo(map)
+      .bindPopup(`📍 Project Location<br/><small>${mlat.toFixed(5)}, ${mlng.toFixed(5)}</small>`)
+      .openPopup();
+
+    if (interactive) {
+      marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        onLocationChange?.(pos.lat, pos.lng);
+      });
+    }
+    markerRef.current = marker;
+  }, [interactive, onLocationChange]);
+
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -112,8 +128,7 @@ export default function GISMap({
       map.remove();
       mapRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [lat, lng, interactive, onLocationChange, placeMarker]);
 
   // Handle viewCenter prop changes (panning without dropping a pin)
   useEffect(() => {
@@ -135,7 +150,7 @@ export default function GISMap({
         setPinDropped(true);
       }
     }
-  }, [lat, lng]);
+  }, [lat, lng, placeMarker]);
 
   // Draw buffer circles when riskFlags change
   useEffect(() => {
@@ -164,21 +179,6 @@ export default function GISMap({
     }
   }, [riskFlags]);
 
-  function placeMarker(map: L.Map, mlat: number, mlng: number) {
-    if (markerRef.current) markerRef.current.remove();
-    const marker = L.marker([mlat, mlng], { draggable: interactive })
-      .addTo(map)
-      .bindPopup(`📍 Project Location<br/><small>${mlat.toFixed(5)}, ${mlng.toFixed(5)}</small>`)
-      .openPopup();
-
-    if (interactive) {
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng();
-        onLocationChange?.(pos.lat, pos.lng);
-      });
-    }
-    markerRef.current = marker;
-  }
 
   return (
     <div className="rounded-xl overflow-hidden border border-gray-200 shadow-sm">
