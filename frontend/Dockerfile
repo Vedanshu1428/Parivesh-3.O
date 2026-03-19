@@ -3,12 +3,14 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
+# Copy lockfiles and workspace package.json files
 COPY package*.json ./
+COPY backend/package*.json ./backend/
 COPY frontend/package*.json ./frontend/
 COPY shared/ ./shared/
 
+# Install all workspace dependencies
 RUN npm install
-RUN cd frontend && npm install
 
 COPY frontend/ ./frontend/
 
